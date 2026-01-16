@@ -4,77 +4,197 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>108課綱學測地理模擬App</title>
+    <!-- 引入 React 和 ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用於解析 JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Font Awesome (用於地理特定圖標) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #ecfdf5; } /* Emerald-50 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
         .font-serif { font-family: 'Noto Serif TC', serif; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        .animate-slide-up { animation: slideUp 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-slide-in-right { animation: slideInRight 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 自定義捲軸 */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #d1fae5; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #34d399; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #059669; }
-        
-        /* 複選題 Checkbox 樣式優化 */
-        .checkbox-ring { transition: all 0.2s; }
+        /* 地理地圖紋理背景 */
+        .bg-geo-pattern {
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
     </style>
 </head>
-<body class="h-screen w-full flex justify-center items-center overflow-hidden text-slate-800">
-    <div id="root" class="w-full h-full max-w-md bg-[#fafffd] shadow-2xl relative flex flex-col border-x border-slate-200"></div>
+<body class="bg-stone-100 h-screen w-full flex justify-center items-center overflow-hidden">
+    <div id="root" class="w-full h-full max-w-md bg-white shadow-2xl relative flex flex-col"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
         // -----------------------------------------------------------------------------
-        // 0. 地理風格圖標 (Lucide Icons)
+        // 0. 內建圖標元件 (使用 FontAwesome 或 SVG)
         // -----------------------------------------------------------------------------
         const Icons = {
-            Map: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>,
-            Mountain: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>,
-            Compass: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>,
-            Layers: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>,
-            CheckCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-            XCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>,
-            ChevronLeft: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="15 18 9 12 15 6"/></svg>,
-            ChevronRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 18 15 12 9 6"/></svg>,
-            Flag: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>,
-            Grid: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-            RefreshCw: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
-            CheckSquare: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
-            Square: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+            Globe: (props) => <i className={`fa-solid fa-earth-americas ${props.className}`} style={{fontSize: props.size}}></i>,
+            Mountain: (props) => <i className={`fa-solid fa-mountain-sun ${props.className}`} style={{fontSize: props.size}}></i>,
+            City: (props) => <i className={`fa-solid fa-city ${props.className}`} style={{fontSize: props.size}}></i>,
+            // FIX: Rename Map to MapIcon to avoid conflict with native Map object
+            MapIcon: (props) => <i className={`fa-solid fa-map-location-dot ${props.className}`} style={{fontSize: props.size}}></i>,
+            Satellite: (props) => <i className={`fa-solid fa-satellite ${props.className}`} style={{fontSize: props.size}}></i>,
+            
+            // UI Icons
+            Home: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Grid: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>,
+            Flag: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>,
+            ChevronLeft: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m15 18-6-6 6-6"/></svg>,
+            ChevronRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m9 18 6-6-6-6"/></svg>,
+            Award: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+            XCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>,
+            RotateCcw: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Compass: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>,
+            Tag: (props) => <svg xmlns="http://www.w3.org/2000/svg" width={props.size||20} height={props.size||20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94 .94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
         };
 
-        const { Map, Mountain, Compass, Layers, CheckCircle, XCircle, ChevronLeft, ChevronRight, Flag, Grid, RefreshCw, CheckSquare, Square } = Icons;
+        const { Globe, Mountain, City, MapIcon, Satellite, Home, Grid, Flag, ChevronLeft, ChevronRight, Award, XCircle, RotateCcw, Compass, Tag } = Icons;
 
         // -----------------------------------------------------------------------------
-        // 1. 地理資料庫 (Geography Database)
+        // 1. 真實題庫範例 (Real Questions - Geography)
         // -----------------------------------------------------------------------------
-
-        const PHYSICAL_GEOGRAPHY = [
-            { topic: '地形系統', key: '沖積扇', desc: '河流流出谷口，因坡度變緩流速降低，泥沙堆積呈扇狀。', fake: ['三角洲', '氾濫平原', '曲流'] },
-            { topic: '氣候系統', key: '行星風系', desc: '受太陽輻射與地球自轉影響，形成全球性的風帶與氣壓帶分佈。', fake: ['季風系統', '地方風系', '焚風'] },
-            { topic: '地圖資訊', key: 'GIS', desc: '地理資訊系統，用於蒐集、儲存、分析與展示空間資料的電腦系統。', fake: ['GPS', 'RS', 'LBS'] },
-            { topic: '水文系統', key: '透水層', desc: '岩層孔隙大，地下水容易滲透流動的岩層，如砂岩、礫岩。', fake: ['不透水層', '受壓水層', '地下水面'] }
+        const REAL_QUESTION_EXAMPLES = [
+            {
+                id: 'real_geo_1',
+                type: 'single',
+                category: '自然地理',
+                text: '台灣某河流具有「荒溪型」的特性，流量豐枯變化極大。請問造成此現象的主要氣候因素為何？',
+                options: [
+                    '降水季節分佈不均',
+                    '年降水量過少',
+                    '蒸發量大於降水量',
+                    '氣溫年較差大'
+                ],
+                correctAnswer: [0],
+                explanation: '台灣河川多屬荒溪型，主因是降水高度集中於夏季（梅雨、颱風），冬季則相對乾旱，導致河川流量豐枯懸殊。',
+                difficulty: '易'
+            },
+            {
+                id: 'real_geo_2',
+                type: 'single',
+                category: '人文地理',
+                text: '某跨國成衣公司考量生產成本，將工廠設在越南、孟加拉等地。此種區位選擇主要受下列何種工業區位因素影響？',
+                options: [
+                    '勞力',
+                    '動力',
+                    '原料',
+                    '市場'
+                ],
+                correctAnswer: [0],
+                explanation: '紡織成衣業屬於勞力密集產業，越南、孟加拉擁有大量且相對低廉的勞動力，因此吸引跨國企業設廠。',
+                difficulty: '易'
+            },
+            {
+                id: 'real_geo_3',
+                type: 'single',
+                category: '地理技術',
+                text: '若要分析某地區坡度大於30%且同時屬於土石流潛勢區的範圍，利用地理資訊系統（GIS）進行分析時，最適合使用下列哪一項疊圖功能？',
+                options: [
+                    '交集 (Intersect)',
+                    '聯集 (Union)',
+                    '環域 (Buffer)',
+                    '視域 (Viewshed)'
+                ],
+                correctAnswer: [0],
+                explanation: '要找出「同時符合」兩個條件（坡度>30% AND 土石流潛勢區）的區域，應使用疊圖分析中的「交集」功能。',
+                difficulty: '中'
+            },
+            {
+                id: 'real_geo_4',
+                type: 'group',
+                category: '混合題 (氣候變遷)',
+                passageTitle: '全球暖化與極端氣候',
+                passageContent: `近年來，全球平均氣溫持續上升，導致極地冰層融化、海平面上升。同時，極端天氣事件（如強降雨、乾旱、熱浪）發生的頻率與強度也顯著增加。某海島國家面臨國土被淹沒的危機，正尋求國際援助。`,
+                questions: [
+                    {
+                        id: 'real_geo_4_1',
+                        type: 'single',
+                        text: '下列何種氣體是造成上述現象最主要的人為溫室氣體？',
+                        options: [
+                            '二氧化碳 (CO2)',
+                            '甲烷 (CH4)',
+                            '氧化亞氮 (N2O)',
+                            '臭氧 (O3)'
+                        ],
+                        correctAnswer: [0],
+                        explanation: '雖然甲烷的溫室效應潛勢較高，但以排放總量及對全球暖化的貢獻度而言，二氧化碳是最主要的人為溫室氣體。',
+                        difficulty: '易'
+                    },
+                    {
+                        id: 'real_geo_4_2',
+                        type: 'single',
+                        text: '海平面上升對台灣西南沿海地區最直接的衝擊為何？',
+                        options: [
+                            '土壤鹽化與地層下陷加劇',
+                            '沙塵暴頻率增加',
+                            '河川向源侵蝕作用增強',
+                            '珊瑚礁白化範圍擴大'
+                        ],
+                        correctAnswer: [0],
+                        explanation: '海平面上升會導致海水倒灌，加劇沿海低窪地區的淹水、土壤鹽化問題，若配合超抽地下水，地層下陷區將更易積水不退。',
+                        difficulty: '中'
+                    }
+                ]
+            }
         ];
 
-        const HUMAN_GEOGRAPHY = [
-            { topic: '人口地理', key: '扶養比', desc: '（幼年人口+老年人口）/ 壯年人口 × 100%。反映社會的經濟負擔。', fake: ['性別比', '人口密度', '老化指數'] },
-            { topic: '產業活動', key: '韋伯工業區位', desc: '強調「運輸成本」最小化，考慮原料與產品的重量及運費。', fake: ['邱念圈', '中地理論', '產品生命週期'] },
-            { topic: '都市系統', key: '中地理論', desc: '克里斯徒勒提出，解釋聚落大小、數量與分佈的規律，強調「商品圈」與「商閾」。', fake: ['同心圓模式', '扇形模式', '多核心模式'] }
+        // -----------------------------------------------------------------------------
+        // 2. 地理題庫產生器資料庫 (Geography Database)
+        // -----------------------------------------------------------------------------
+
+        // 自然地理模組 (Physical Geography)
+        const PHY_CONCEPTS = [
+            { topic: '板塊運動', q: '位於環太平洋火山地震帶上的國家，最容易見到哪種地形景觀？', ans: '火山與褶曲山脈', opts: ['廣大的衝積平原', '古老的地盾', '冰蝕湖泊'] },
+            { topic: '氣候類型', q: '關於「地中海型氣候」的敘述，下列何者正確？', ans: '夏乾冬雨', opts: ['全年有雨', '夏雨冬乾', '全年乾燥少雨'] },
+            { topic: '河流地形', q: '河流出海口若因泥沙堆積量大於波浪侵蝕量，最容易形成何種地形？', ans: '三角洲', opts: ['沖積扇', '氾濫平原', '河階'] },
+            { topic: '土壤成因', q: '在高溫多雨的熱帶雨林區，土壤淋溶作用旺盛，容易形成何種顏色的土壤？', ans: '紅土 (磚紅壤)', opts: ['黑土 (黑鈣土)', '灰化土', '黃土'] },
+            { topic: '洋流系統', q: '北大西洋暖流對西歐氣候的主要影響為何？', ans: '增溫增濕', opts: ['降溫減濕', '增溫減濕', '降溫增濕'] },
+            { topic: '冰河地形', q: 'U型谷（冰蝕槽）主要是由何種營力作用形成？', ans: '冰河侵蝕', opts: ['河流侵蝕', '風力侵蝕', '海水侵蝕'] }
+        ];
+
+        // 人文地理模組 (Human Geography)
+        const HUM_CONCEPTS = [
+            { topic: '人口轉型', q: '在人口轉型模式的「高穩定階段」，其出生率與死亡率的特徵為何？', ans: '高出生率、高死亡率', opts: ['高出生率、低死亡率', '低出生率、低死亡率', '低出生率、高死亡率'] },
+            { topic: '都市階層', q: '依照中地理論，高級中地與低級中地的比較，下列何者正確？', ans: '高級中地數量較少，服務範圍較大', opts: ['高級中地數量較多，服務範圍較小', '兩者數量相同', '低級中地提供的商品種類較多'] },
+            { topic: '農業區位', q: '邱念圈（Thunen）模式中，最靠近市場中心的農業活動通常是？', ans: '園藝農業 (酪農、蔬果)', opts: ['放牧業', '小麥種植', '林業'] },
+            { topic: '工業區位', q: '韋伯 (Weber) 的工業區位理論主要強調下列哪項成本的最小化？', ans: '運輸成本', opts: ['勞工成本', '集聚經濟', '土地成本'] },
+            { topic: '全球化', q: '跨國企業在全球進行空間分工，通常將研發中心設在母國或核心國家，主要是考量？', ans: '高素質的人力資源與技術', opts: ['低廉的土地成本', '豐富的天然資源', '寬鬆的環保法規'] }
+        ];
+
+        // 區域地理模組 (Regional Geography)
+        const REG_CONCEPTS = [
+            { topic: '台灣地形', q: '台灣地形主體骨幹是哪一座山脈？', ans: '中央山脈', opts: ['雪山山脈', '玉山山脈', '海岸山脈'] },
+            { topic: '東南亞文化', q: '東南亞地區宗教信仰多元，其中菲律賓主要信仰何種宗教？', ans: '天主教', opts: ['伊斯蘭教', '佛教', '印度教'] },
+            { topic: '北美農業', q: '美國中西部著名的「玉米帶」與「乳酪帶」，其分佈主要受何種因素影響？', ans: '氣候條件', opts: ['礦產分佈', '政治界線', '種族分佈'] },
+            { topic: '非洲發展', q: '薩赫爾地區 (Sahel) 長期面臨嚴重的環境問題，主要是？', ans: '沙漠化', opts: ['酸雨', '永凍土融化', '火山爆發'] },
+            { topic: '歐洲聯盟', q: '歐盟成立的主要目標之一，是透過哪種方式促進會員國間的經濟整合？', ans: '消除關稅壁壘', opts: ['統一語言', '建立單一宗教', '廢除各國軍隊'] }
+        ];
+
+        // 地理技術模組 (Geographic Techniques)
+        const TECH_CONCEPTS = [
+            { topic: '地圖投影', q: '若要繪製世界航海圖，最適合使用哪種投影法，以確保方向正確？', ans: '麥卡托投影', opts: ['莫爾威投影', '蘭伯特投影', '羅賓森投影'] },
+            { topic: 'GIS資料模式', q: '在GIS中，利用網格 (Grid) 來儲存資料，適合表現下列哪種地理現象？', ans: '地形高程 (DEM)', opts: ['道路網絡', '行政區界線', '電線桿位置'] },
+            { topic: 'GPS應用', q: 'GPS全球定位系統最主要的功能是提供什麼資訊？', ans: '三維坐標與時間', opts: ['地表溫度', '植被覆蓋率', '土壤濕度'] },
+            { topic: '遙測技術', q: '利用衛星影像來監測亞馬遜雨林的砍伐狀況，是屬於哪種地理技術的應用？', ans: '遙測 (RS)', opts: ['全球定位系統 (GPS)', '地圖繪製', '實地考察'] },
+            { topic: '等高線判讀', q: '在等高線地形圖上，若等高線向高處凸出（V字尖端指向高處），代表該地為何種地形？', ans: '河谷', opts: ['山脊', '山頂', '鞍部'] }
         ];
 
         // -----------------------------------------------------------------------------
-        // 2. 隨機題庫生成邏輯 (Generator)
+        // Helper: Fisher-Yates Shuffle
         // -----------------------------------------------------------------------------
-
         const fisherYatesShuffle = (array) => {
             let currentIndex = array.length, randomIndex;
             while (currentIndex !== 0) {
@@ -85,492 +205,445 @@
             return array;
         };
 
-        const generateMockQuestions = (count) => {
-            const allConcepts = [
-                ...PHYSICAL_GEOGRAPHY.map(c => ({...c, category: '自然地理'})), 
-                ...HUMAN_GEOGRAPHY.map(c => ({...c, category: '人文地理'}))
-            ];
+        // -----------------------------------------------------------------------------
+        // Generator Logic
+        // -----------------------------------------------------------------------------
+        const generateGeographyMock = (category, itemIndex, variantCount) => {
+            const shuffle = (arr) => [...arr].sort(() => 0.5 - Math.random());
+            const isReview = variantCount > 0;
+            const reviewLabel = isReview ? '【💡觀念複習】' : '';
+
+            let db, icon, colorClass, categoryName;
+
+            switch(category) {
+                case 'phy': 
+                    db = PHY_CONCEPTS; 
+                    icon = <Icons.Mountain size={16} />; 
+                    colorClass = "text-emerald-700 bg-emerald-100";
+                    categoryName = "自然地理";
+                    break;
+                case 'hum': 
+                    db = HUM_CONCEPTS; 
+                    icon = <Icons.City size={16} />; 
+                    colorClass = "text-orange-700 bg-orange-100";
+                    categoryName = "人文地理";
+                    break;
+                case 'reg': 
+                    db = REG_CONCEPTS; 
+                    icon = <Icons.Globe size={16} />; 
+                    colorClass = "text-sky-700 bg-sky-100";
+                    categoryName = "區域地理";
+                    break;
+                case 'tech': 
+                    db = TECH_CONCEPTS; 
+                    icon = <Icons.Satellite size={16} />; 
+                    colorClass = "text-indigo-700 bg-indigo-100";
+                    categoryName = "地理技術";
+                    break;
+            }
+
+            const item = db[itemIndex % db.length];
+            const distractors = shuffle(item.opts);
             
-            const questions = [];
-
-            for (let i = 0; i < count; i++) {
-                const concept = allConcepts[Math.floor(Math.random() * allConcepts.length)];
-                
-                // 單選題模板
-                const templates = [
-                    {
-                        q: `下列對於「${concept.key}」的描述，何者最為正確？`,
-                        correct: concept.desc
-                    },
-                    {
-                        q: `「${concept.desc}」這段文字最可能是在描述下列哪一個地理概念？`,
-                        correct: concept.key
-                    }
+            // 變體邏輯：複習題修改問法
+            let qText = item.q;
+            if (isReview) {
+                const variants = [
+                    str => `(觀念強化) ${str}`,
+                    str => str.replace('下列何者', '請判斷何者'),
+                    str => str.includes('為何') ? str.replace('為何', '主要原因是什麼') : `針對「${item.topic}」概念，${str}`
                 ];
-                const template = templates[Math.floor(Math.random() * templates.length)];
+                qText = variants[variantCount % variants.length](qText);
+            }
 
-                let options = [];
-                options.push({ text: template.correct, isCorrect: true });
-                
-                let distractors = [];
-                if (template.q.includes(concept.key)) {
-                   distractors = allConcepts.filter(c => c.key !== concept.key).map(c => c.desc);
-                } else {
-                   distractors = [...concept.fake];
-                   while(distractors.length < 3) {
-                       const randomC = allConcepts[Math.floor(Math.random() * allConcepts.length)];
-                       if(randomC.key !== concept.key && !distractors.includes(randomC.key)) {
-                           distractors.push(randomC.key);
-                       }
-                   }
-                }
-                
-                fisherYatesShuffle(distractors).slice(0, 3).forEach(d => {
-                    options.push({ text: d, isCorrect: false });
-                });
+            return {
+                category: categoryName,
+                text: `${reviewLabel} [${item.topic}] ${qText}`,
+                options: [item.ans, ...distractors],
+                explanation: `正確答案為「${item.ans}」。本題測驗重點為：${item.topic}。`,
+                correctIndex: 0,
+                isReview,
+                colorClass,
+                icon
+            };
+        };
 
-                questions.push({
-                    id: `gen_${i}_${Date.now()}`,
-                    type: 'single',
-                    category: concept.category,
-                    text: template.q,
-                    options: fisherYatesShuffle(options),
-                    explanation: `解析：${concept.desc}`,
-                    topic: concept.topic
+        const generateMockQuestions = (startId, count) => {
+            const mocks = [];
+            const categories = ['phy', 'hum', 'reg', 'tech'];
+            let taskPool = [];
+            
+            // 計算總基礎題數
+            const totalBaseItems = PHY_CONCEPTS.length + HUM_CONCEPTS.length + REG_CONCEPTS.length + TECH_CONCEPTS.length;
+            const loopsNeeded = Math.ceil(count / totalBaseItems) + 1;
+
+            for (let loop = 0; loop < loopsNeeded; loop++) {
+                categories.forEach(cat => {
+                    let len = 0;
+                    if(cat === 'phy') len = PHY_CONCEPTS.length;
+                    if(cat === 'hum') len = HUM_CONCEPTS.length;
+                    if(cat === 'reg') len = REG_CONCEPTS.length;
+                    if(cat === 'tech') len = TECH_CONCEPTS.length;
+
+                    for (let i = 0; i < len; i++) {
+                        taskPool.push({ cat, itemIndex: i, variantCount: loop });
+                    }
                 });
             }
-            return questions;
+
+            taskPool = fisherYatesShuffle(taskPool);
+            const selectedTasks = taskPool.slice(0, count);
+
+            selectedTasks.forEach((task, i) => {
+                const content = generateGeographyMock(task.cat, task.itemIndex, task.variantCount);
+                
+                let finalOptions = content.options.map((text, idx) => ({ 
+                    text, 
+                    isCorrect: idx === content.correctIndex 
+                }));
+                finalOptions = fisherYatesShuffle(finalOptions);
+                
+                let correctIndices = [];
+                finalOptions.forEach((opt, idx) => {
+                    if (opt.isCorrect) correctIndices.push(idx);
+                });
+
+                const answerLabels = correctIndices.map(idx => String.fromCharCode(65 + idx)).join(', ');
+
+                mocks.push({
+                    id: `mock_geo_${startId + i}`,
+                    type: 'single', 
+                    category: content.category,
+                    text: `[Q${startId + i}] ${content.text}`,
+                    options: finalOptions.map(o => o.text),
+                    correctAnswer: correctIndices,
+                    explanation: `${content.explanation} (答案: ${answerLabels})`,
+                    difficulty: ['易', '中', '難'][Math.floor(Math.random() * 3)],
+                    isReview: content.isReview,
+                    colorClass: content.colorClass
+                });
+            });
+            return mocks;
         };
 
         // -----------------------------------------------------------------------------
-        // 3. 真實/手寫精選題庫 (包含單選與複選)
+        // App Component
         // -----------------------------------------------------------------------------
-        const REAL_QUESTIONS = [
-            {
-                id: 'real_geo_1',
-                type: 'single', // 單選
-                category: '自然地理',
-                topic: '地圖',
-                text: '若要在地圖上呈現台灣各鄉鎮市區的「人口密度」高低，最適合使用下列哪一種統計地圖？',
-                options: [
-                    { text: '點子圖 (Dot Map)', isCorrect: false },
-                    { text: '等值線圖 (Isoline Map)', isCorrect: false },
-                    { text: '面量圖 (Choropleth Map)', isCorrect: true },
-                    { text: '流線圖 (Flow Map)', isCorrect: false }
-                ],
-                explanation: '解析：面量圖（區域密度圖）利用色彩深淺或網紋疏密來表現行政區內的統計數據（如人口密度、各種率），最適合呈現平均分佈的概念。'
-            },
-            {
-                id: 'real_geo_2',
-                type: 'single',
-                category: '人文地理',
-                topic: '農業區位',
-                text: '邱念 (Thunen) 的農業區位理論中，影響農業土地利用型態呈現「同心圓」分佈的最主要因素是什麼？',
-                options: [
-                    { text: '勞力成本', isCorrect: false },
-                    { text: '土壤肥沃度', isCorrect: false },
-                    { text: '市場距離與運費', isCorrect: true },
-                    { text: '政策與氣候', isCorrect: false }
-                ],
-                explanation: '解析：邱念孤立國理論假設地形平坦、土壤均質，唯一變數是到市場的距離，因此運費決定了級差地租，形成以市場為中心的同心圓農業圈。'
-            },
-            {
-                id: 'real_geo_3',
-                type: 'multiple', // 複選題
-                category: '區域地理',
-                topic: '台灣地形',
-                text: '台灣本島位於板塊交界處，地形複雜多樣。下列關於台灣地形特徵的敘述，哪些是正確的？（應選3項）',
-                options: [
-                    { text: '位於歐亞板塊與菲律賓海板塊的聚合帶', isCorrect: true },
-                    { text: '東部海岸多為沙岸，西部海岸多為岩岸', isCorrect: false },
-                    { text: '山脈走向大致與板塊擠壓方向垂直，呈南北縱走', isCorrect: true },
-                    { text: '主要河川多發源於中央山脈，東西分流', isCorrect: true },
-                    { text: '平原主要分布於東部，西部則以台地為主', isCorrect: false }
-                ],
-                explanation: '解析：B錯誤，應為東部多岩岸（斷層海岸）、西部多沙岸（堆積海岸）；E錯誤，平原主要分布於西部（如嘉南平原）。A、C、D皆為台灣地形正確特徵。'
-            },
-            {
-                id: 'real_geo_4',
-                type: 'multiple',
-                category: '技術應用',
-                topic: 'GPS應用',
-                text: '全球衛星定位系統 (GPS) 已廣泛應用於日常生活中。下列哪些情境主要依賴 GPS 技術？（應選2項）',
-                options: [
-                    { text: '分析某地區近十年的土地利用變遷', isCorrect: false },
-                    { text: '汽車導航系統規劃最佳路徑', isCorrect: true },
-                    { text: '查詢公車即時到站位置', isCorrect: true },
-                    { text: '利用雷達衛星影像監測地層下陷', isCorrect: false },
-                    { text: '繪製全台登革熱確診病例分佈圖', isCorrect: false }
-                ],
-                explanation: '解析：B、C 皆需即時「定位」功能，屬 GPS 應用。A、D 屬於遙測 (RS) 與 GIS 的疊圖分析；E 為 GIS 的資料展示功能，不一定需要即時 GPS。'
-            }
-        ];
-
-        // -----------------------------------------------------------------------------
-        // 4. React Components
-        // -----------------------------------------------------------------------------
-
-        function App() {
-            const [screen, setScreen] = useState('home'); // home, quiz, result
+        function GeographyApp() {
+            const [currentScreen, setCurrentScreen] = useState('home'); 
             const [questions, setQuestions] = useState([]);
-            const [currentQIndex, setCurrentQIndex] = useState(0);
-            
-            // Ans State: 
-            // Single: { qId: optionIndex }
-            // Multiple: { qId: [optionIndex, optionIndex...] }
-            const [answers, setAnswers] = useState({}); 
-            const [marked, setMarked] = useState(new Set());
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [userAnswers, setUserAnswers] = useState({});
+            const [markedQuestions, setMarkedQuestions] = useState(new Set()); 
             const [showExplanation, setShowExplanation] = useState(false);
-            const [showGrid, setShowGrid] = useState(false);
+            const [showGrid, setShowGrid] = useState(false); 
 
-            // 初始化考卷
-            const initExam = () => {
-                const generated = generateMockQuestions(20); // 隨機生成20題單選
-                const allQ = fisherYatesShuffle([...REAL_QUESTIONS, ...generated]);
-                setQuestions(allQ);
-                setAnswers({});
-                setMarked(new Set());
-                setCurrentQIndex(0);
-                setShowExplanation(false);
-                setScreen('quiz');
-            };
-
-            // 處理單選作答
-            const handleSingleChoice = (optIndex) => {
-                if (showExplanation) return; 
-                const q = questions[currentQIndex];
-                setAnswers(prev => ({ ...prev, [q.id]: optIndex }));
-                setShowExplanation(true); // 單選立即顯示解析
-            };
-
-            // 處理複選作答 (Toggle)
-            const handleMultiChoice = (optIndex) => {
-                if (showExplanation) return;
-                const q = questions[currentQIndex];
-                setAnswers(prev => {
-                    const currentSelected = prev[q.id] || [];
-                    if (currentSelected.includes(optIndex)) {
-                        return { ...prev, [q.id]: currentSelected.filter(i => i !== optIndex) };
+            useEffect(() => {
+                let flattened = [];
+                // 處理真實題庫
+                REAL_QUESTION_EXAMPLES.forEach(item => {
+                    if (item.type === 'group') {
+                        item.questions.forEach(q => {
+                            flattened.push({
+                                ...q,
+                                groupTitle: item.passageTitle,
+                                groupContent: item.passageContent,
+                                isGroup: true,
+                                colorClass: "text-stone-700 bg-stone-100"
+                            });
+                        });
                     } else {
-                        return { ...prev, [q.id]: [...currentSelected, optIndex].sort() };
+                        // 根據類別分配顏色
+                        let color = "text-stone-700 bg-stone-100";
+                        if(item.category.includes('自然')) color = "text-emerald-700 bg-emerald-100";
+                        if(item.category.includes('人文')) color = "text-orange-700 bg-orange-100";
+                        if(item.category.includes('技術')) color = "text-indigo-700 bg-indigo-100";
+                        
+                        flattened.push({
+                             ...item,
+                             colorClass: color
+                        });
                     }
                 });
+
+                const currentCount = flattened.length;
+                const needed = 500 - currentCount;
+                if (needed > 0) {
+                    const mocks = generateMockQuestions(currentCount + 1, needed);
+                    flattened = [...flattened, ...mocks];
+                }
+
+                setQuestions(flattened);
+            }, []);
+
+            const startExam = () => {
+                setCurrentQuestionIndex(0);
+                setUserAnswers({});
+                setMarkedQuestions(new Set());
+                setShowExplanation(false);
+                setShowGrid(false);
+                setCurrentScreen('quiz');
             };
 
-            // 複選題送出確認
-            const submitMultiAnswer = () => {
-                const q = questions[currentQIndex];
-                if (!answers[q.id] || answers[q.id].length === 0) return; // 未選不能送
+            const handleAnswerSelect = (optionIndex) => {
+                if (showExplanation) return; 
+                const currentQ = questions[currentQuestionIndex];
+                setUserAnswers(prev => ({ ...prev, [currentQ.id]: [optionIndex] }));
                 setShowExplanation(true);
             };
 
-            const toggleMark = () => {
-                const q = questions[currentQIndex];
-                setMarked(prev => {
+            const toggleMarkQuestion = () => {
+                const qId = questions[currentQuestionIndex].id;
+                setMarkedQuestions(prev => {
                     const newSet = new Set(prev);
-                    if (newSet.has(q.id)) newSet.delete(q.id);
-                    else newSet.add(q.id);
+                    if (newSet.has(qId)) newSet.delete(qId);
+                    else newSet.add(qId);
                     return newSet;
                 });
             };
 
-            // 計算分數 (簡單制：全對才得分)
-            const scoreData = useMemo(() => {
-                if (questions.length === 0) return { score: 0, total: 0 };
-                let correctCount = 0;
-                let answeredCount = 0;
-                
+            const calculateScore = () => {
+                let rawScore = 0;
                 questions.forEach(q => {
-                    const ans = answers[q.id];
-                    if (ans !== undefined) {
-                        answeredCount++;
-                        if (q.type === 'single') {
-                            if (q.options[ans].isCorrect) correctCount++;
-                        } else {
-                            // 複選題核對邏輯：使用者選的 indices 必須等於所有正確選項的 indices
-                            const userIndices = JSON.stringify(ans); // ans is already sorted in handleMultiChoice
-                            const correctIndices = JSON.stringify(
-                                q.options.map((o, i) => o.isCorrect ? i : -1).filter(i => i !== -1).sort()
-                            );
-                            if (userIndices === correctIndices) correctCount++;
-                        }
+                    const userAns = userAnswers[q.id] || [];
+                    const correctAns = q.correctAnswer;
+                    if (userAns.length > 0 && userAns[0] === correctAns[0]) {
+                        rawScore++;
                     }
                 });
-                return { correct: correctCount, answered: answeredCount, total: questions.length };
-            }, [answers, questions]);
+                const percentage = (rawScore / questions.length) * 100;
+                let rank = 0;
+                if (percentage >= 90) rank = 15;
+                else if (percentage >= 85) rank = 14;
+                else if (percentage >= 80) rank = 13;
+                else if (percentage >= 70) rank = 11;
+                else if (percentage >= 60) rank = 9;
+                else rank = Math.floor(percentage / 10) + 1;
 
-            // --- Home Screen ---
-            if (screen === 'home') {
-                return (
-                    <div className="flex flex-col items-center justify-center h-full p-8 space-y-8 bg-[#ecfdf5]">
-                        <div className="flex flex-col items-center space-y-4 animate-slide-up">
-                            <div className="p-6 bg-emerald-600 rounded-full text-white shadow-xl ring-4 ring-emerald-200">
-                                <Icons.Compass size={64} strokeWidth={1.5} />
-                            </div>
-                            <h1 className="text-4xl font-bold font-serif tracking-wide text-emerald-900">地理探索</h1>
-                            <p className="text-slate-500 font-serif text-lg text-center">
-                                108課綱 • 學測地理模擬<br/>
-                                <span className="text-sm opacity-75 font-sans">自然 • 人文 • 區域 • 技術</span>
-                            </p>
-                        </div>
-                        
-                        <div className="w-full max-w-xs space-y-3 animate-fade-in" style={{animationDelay: '0.2s'}}>
-                            <div className="flex justify-between text-xs text-slate-400 px-2 font-mono">
-                                <span>Ver 1.5</span>
-                                <span>單選 + 複選</span>
-                            </div>
-                            <button 
-                                onClick={initExam}
-                                className="w-full py-4 bg-emerald-800 text-white rounded-xl font-bold text-lg shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-3"
-                            >
-                                <Icons.Map size={24} />
-                                開始測驗
-                            </button>
-                            <div className="text-center text-xs text-slate-400 mt-4">
-                                含混合題型模擬 • 即時解析
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
+                return { rawScore, total: questions.length, rank, percentage };
+            };
 
-            // --- Result Screen ---
-            if (screen === 'result') {
-                const percent = Math.round((scoreData.correct / scoreData.total) * 100) || 0;
-                return (
-                    <div className="h-full flex flex-col bg-[#ecfdf5]">
-                        <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-8 animate-fade-in">
-                            <h2 className="text-2xl font-serif font-bold text-emerald-900">測驗結果</h2>
-                            
-                            <div className="relative w-48 h-48 flex items-center justify-center">
-                                <svg className="w-full h-full transform -rotate-90">
-                                    <circle cx="96" cy="96" r="88" stroke="#d1fae5" strokeWidth="12" fill="none" />
-                                    <circle cx="96" cy="96" r="88" stroke="#059669" strokeWidth="12" fill="none" 
-                                        strokeDasharray={2 * Math.PI * 88}
-                                        strokeDashoffset={2 * Math.PI * 88 * (1 - percent / 100)}
-                                        className="transition-all duration-1000 ease-out"
-                                    />
-                                </svg>
-                                <div className="absolute flex flex-col items-center">
-                                    <span className="text-5xl font-serif font-bold text-emerald-800">{percent}</span>
-                                    <span className="text-xs text-emerald-600 uppercase tracking-widest">Score</span>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-                                <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 text-center">
-                                    <div className="text-xs text-slate-400 mb-1">答對題數</div>
-                                    <div className="text-xl font-bold text-emerald-700">{scoreData.correct} <span className="text-sm text-slate-400">/ {scoreData.total}</span></div>
-                                </div>
-                                <div className="bg-white p-4 rounded-xl shadow-sm border border-emerald-100 text-center">
-                                    <div className="text-xs text-slate-400 mb-1">答題率</div>
-                                    <div className="text-xl font-bold text-emerald-700">{scoreData.answered} <span className="text-sm text-slate-400">/ {scoreData.total}</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-6 bg-white border-t border-slate-100 pb-8">
-                            <button onClick={() => setScreen('home')} className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold shadow-md hover:bg-slate-700 transition flex items-center justify-center gap-2">
-                                <Icons.RefreshCw size={20} /> 重返首頁
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // --- Quiz Screen ---
-            const q = questions[currentQIndex];
-            const isSingle = q.type === 'single';
-            const userAnswer = answers[q.id]; 
-            // isAnswered logic differs:
-            // Single: userAnswer is not undefined
-            // Multiple: showExplanation is true (user clicked confirm)
-            const isSubmitted = showExplanation; 
-            
-            return (
-                <div className="flex flex-col h-full bg-[#fafffd]">
-                    {/* Header */}
-                    <div className="h-16 bg-white/80 backdrop-blur-md border-b border-emerald-100 flex items-center justify-between px-4 shrink-0 shadow-sm z-10">
-                        <button onClick={() => setScreen('home')} className="text-slate-400 hover:text-emerald-600 p-2">
-                            <Icons.Map size={24} />
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded">
-                                {isSingle ? '單選' : '複選'}
-                            </span>
-                            <span className="font-serif font-bold text-lg text-emerald-900">Q{currentQIndex + 1}</span>
-                        </div>
-                        <button onClick={() => setShowGrid(true)} className="text-slate-400 hover:text-emerald-600 p-2">
-                            <Icons.Grid size={24} />
-                        </button>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-5 pb-32">
-                        <div className="flex gap-2 mb-4">
-                            <span className="px-3 py-1 bg-teal-50 text-teal-700 text-xs font-bold rounded-full tracking-wider border border-teal-100">
-                                {q.category}
-                            </span>
-                            <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs rounded-full">
-                                {q.topic}
-                            </span>
-                        </div>
-
-                        <div className="mb-6">
-                            <h3 className="text-xl font-serif font-medium leading-relaxed text-slate-900 text-justify">
-                                {q.text}
+            const QuestionGrid = ({ closeGrid }) => (
+                <div className="fixed inset-0 bg-black/50 z-50 flex justify-end animate-fade-in">
+                    <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
+                        <div className="p-4 border-b flex justify-between items-center bg-stone-50">
+                            <h3 className="font-bold text-lg text-stone-800 flex items-center font-serif">
+                                <Icons.Grid size={20} className="mr-2 text-emerald-700"/> 題目導航
                             </h3>
-                        </div>
-
-                        <div className="space-y-3">
-                            {q.options.map((opt, idx) => {
-                                let isSelected = false;
-                                if (isSingle) {
-                                    isSelected = userAnswer === idx;
-                                } else {
-                                    isSelected = (userAnswer || []).includes(idx);
-                                }
-
-                                let btnClass = "w-full p-4 rounded-xl border-2 text-left transition-all duration-200 flex items-start gap-3 relative ";
-                                let iconClass = "mt-0.5 shrink-0 ";
-
-                                if (isSubmitted) {
-                                    // 已交卷模式
-                                    if (opt.isCorrect) {
-                                        // 正確答案 (綠色)
-                                        btnClass += "border-emerald-500 bg-emerald-50 text-emerald-900";
-                                        iconClass += "text-emerald-600";
-                                    } else if (isSelected) {
-                                        // 選錯了 (紅色)
-                                        btnClass += "border-red-400 bg-red-50 text-red-900";
-                                        iconClass += "text-red-500";
-                                    } else {
-                                        // 沒選且不是答案
-                                        btnClass += "border-slate-100 text-slate-400 opacity-60";
-                                        iconClass += "text-slate-300";
-                                    }
-                                } else {
-                                    // 作答模式
-                                    if (isSelected) {
-                                        btnClass += "border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm";
-                                        iconClass += "text-emerald-600";
-                                    } else {
-                                        btnClass += "border-slate-200 hover:border-emerald-300 hover:bg-white bg-white text-slate-700";
-                                        iconClass += "text-slate-300";
-                                    }
-                                }
-
-                                return (
-                                    <button 
-                                        key={idx} 
-                                        onClick={() => isSingle ? handleSingleChoice(idx) : handleMultiChoice(idx)}
-                                        disabled={isSubmitted}
-                                        className={btnClass}
-                                    >
-                                        <div className={iconClass}>
-                                            {isSingle ? (
-                                                isSelected || (isSubmitted && opt.isCorrect) ? <Icons.CheckCircle size={20}/> : <div className="w-5 h-5 rounded-full border-2 border-current"/>
-                                            ) : (
-                                                isSelected || (isSubmitted && opt.isCorrect) ? <Icons.CheckSquare size={20}/> : <Icons.Square size={20}/>
-                                            )}
-                                        </div>
-                                        <span className="text-base leading-relaxed">{opt.text}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* 複選題送出按鈕 */}
-                        {!isSingle && !isSubmitted && (
-                            <button 
-                                onClick={submitMultiAnswer}
-                                className={`w-full mt-6 py-3 rounded-lg font-bold text-white transition-all ${
-                                    (userAnswer && userAnswer.length > 0) ? 'bg-emerald-600 hover:bg-emerald-700 shadow-md' : 'bg-slate-300 cursor-not-allowed'
-                                }`}
-                            >
-                                確認答案
+                            <button onClick={closeGrid} className="p-2 hover:bg-stone-200 rounded-full transition">
+                                <Icons.XCircle size={24} className="text-stone-500"/>
                             </button>
-                        )}
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 bg-stone-50">
+                            <div className="grid grid-cols-5 gap-3">
+                                {questions.map((qItem, idx) => {
+                                    const isAnswered = userAnswers[qItem.id] && userAnswers[qItem.id].length > 0;
+                                    const isMarkedItem = markedQuestions.has(qItem.id);
+                                    const isCurrent = currentQuestionIndex === idx;
+                                    let btnClass = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition relative font-serif ";
+                                    if (isCurrent) btnClass += "ring-2 ring-emerald-600 ring-offset-2 bg-emerald-100 text-emerald-800 font-bold border-2 border-emerald-200 ";
+                                    else if (isAnswered) btnClass += "bg-stone-600 text-white shadow-sm ";
+                                    else btnClass += "bg-white border border-stone-200 text-stone-500 hover:bg-stone-100 ";
 
-                        {/* 解析 */}
-                        {showExplanation && (
-                            <div className="mt-8 p-5 bg-slate-800 text-emerald-50 rounded-xl animate-fade-in shadow-lg border-l-4 border-emerald-500">
-                                <div className="flex items-center gap-2 mb-2 text-emerald-400 font-bold">
-                                    <Icons.Layers size={18} />
-                                    <span>試題解析</span>
-                                </div>
-                                <p className="text-slate-300 leading-relaxed font-light">
-                                    {q.explanation}
-                                </p>
+                                    return (
+                                        <button 
+                                            key={qItem.id} 
+                                            onClick={() => { setCurrentQuestionIndex(idx); setShowExplanation(false); closeGrid(); }}
+                                            className={btnClass}
+                                        >
+                                            {idx + 1}
+                                            {isMarkedItem && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border border-white"></span>}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        )}
+                        </div>
                     </div>
+                </div>
+            );
 
-                    {/* Bottom Nav */}
-                    <div className="h-20 bg-white border-t border-emerald-100 px-6 flex items-center justify-between shrink-0 safe-area-bottom">
-                         <button onClick={toggleMark} className={`p-3 rounded-full transition ${marked.has(q.id) ? 'bg-red-50 text-red-500' : 'text-slate-400 hover:bg-slate-100'}`}>
-                            <Icons.Flag size={20} fill={marked.has(q.id) ? "currentColor" : "none"} />
+            if (currentScreen === 'home') return (
+                <div className="flex flex-col items-center justify-center h-full p-6 space-y-8 animate-fade-in bg-stone-100 bg-geo-pattern relative">
+                    <div className="text-center space-y-4 max-w-lg z-10">
+                        <div className="bg-emerald-700 p-6 rounded-3xl inline-block mb-2 shadow-xl transform rotate-3 hover:rotate-0 transition duration-500">
+                            <Icons.Compass size={64} className="text-white" />
+                        </div>
+                        <h1 className="text-3xl font-extrabold text-stone-800 tracking-tight font-serif">108課綱 • 地理探究</h1>
+                        <p className="text-lg text-stone-600 font-medium">自然 • 人文 • 區域 • 技術</p>
+                        <div className="flex flex-wrap justify-center gap-2 mt-4">
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600 shadow-sm">500題庫</span>
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600 shadow-sm">圖表判讀</span>
+                           <span className="px-3 py-1 bg-white border border-stone-300 rounded-full text-sm text-stone-600 shadow-sm">情境素養</span>
+                        </div>
+                    </div>
+                    <div className="w-full max-w-sm z-10">
+                        <button 
+                            onClick={startExam}
+                            className="w-full flex items-center justify-center p-5 bg-emerald-700 text-white rounded-xl shadow-lg hover:bg-emerald-800 transition transform hover:-translate-y-1 group font-serif border-b-4 border-emerald-900"
+                        >
+                            <div className="bg-white/20 p-2 rounded-full mr-3 group-hover:scale-110 transition">
+                                <Icons.MapIcon size={24} className="text-white" />
+                            </div>
+                            <div className="text-left">
+                                <span className="block font-bold text-xl">開始測驗</span>
+                                <span className="text-sm text-emerald-100">Geography Practice</span>
+                            </div>
                         </button>
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={() => { setShowExplanation(false); setCurrentQIndex(prev => Math.max(0, prev - 1)); }}
-                                disabled={currentQIndex === 0}
-                                className="px-5 py-3 rounded-lg text-slate-500 font-bold hover:bg-slate-100 disabled:opacity-30"
-                            >
-                                <Icons.ChevronLeft />
+                    </div>
+                    <div className="absolute bottom-0 w-full h-1 bg-gradient-to-r from-emerald-400 via-sky-500 to-emerald-400"></div>
+                </div>
+            );
+
+            if (currentScreen === 'result') {
+                const { rawScore, total, rank, percentage } = calculateScore();
+                return (
+                    <div className="flex flex-col items-center h-full bg-stone-100 p-6 overflow-y-auto font-serif">
+                        <div className="w-full max-w-md space-y-6 mt-8">
+                            <div className="bg-white rounded-3xl shadow-xl p-8 text-center relative overflow-hidden border-t-4 border-emerald-500">
+                                <h2 className="text-3xl font-extrabold text-stone-800 mb-2">測驗結束</h2>
+                                <div className="flex justify-center my-8">
+                                    <div className="text-6xl font-black text-emerald-700">{percentage.toFixed(0)}<span className="text-2xl text-stone-400 font-normal">分</span></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-left">
+                                    <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                                        <p className="text-xs text-stone-500 font-bold mb-1">答對題數</p>
+                                        <p className="text-2xl font-bold text-stone-800">{rawScore} / {total}</p>
+                                    </div>
+                                    <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                                        <p className="text-xs text-stone-500 font-bold mb-1">換算級分</p>
+                                        <p className="text-2xl font-bold text-stone-800">{rank}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <button onClick={() => setCurrentScreen('home')} className="w-full bg-stone-700 hover:bg-stone-800 text-white py-4 rounded-2xl font-bold shadow-lg transition flex items-center justify-center space-x-2">
+                                    <Icons.RotateCcw size={20} /> <span>重返首頁</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const q = questions[currentQuestionIndex];
+            if (!q) return <div className="flex items-center justify-center h-full text-xl font-serif text-stone-500">地圖載入中...</div>;
+
+            const currentAns = userAnswers[q.id] || [];
+            const isMarked = markedQuestions.has(q.id);
+
+            return (
+                <div className="flex flex-col h-full bg-stone-50 relative font-sans">
+                    {showGrid && <QuestionGrid closeGrid={() => setShowGrid(false)} />}
+                    
+                    <div className="bg-white shadow-sm px-4 py-3 flex justify-between items-center sticky top-0 z-10 border-b border-stone-200">
+                        <div className="flex items-center space-x-3">
+                            <button onClick={() => setCurrentScreen('home')} className="p-2 hover:bg-stone-100 rounded-lg text-stone-500 transition">
+                                <Icons.Home size={20} />
                             </button>
-                            <button 
-                                onClick={() => {
-                                    if (currentQIndex < questions.length - 1) {
-                                        setShowExplanation(false);
-                                        setCurrentQIndex(prev => prev + 1);
+                            <button onClick={() => setShowGrid(true)} className="flex items-center space-x-2 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-lg transition text-stone-700 font-medium border border-stone-200">
+                                <Icons.Grid size={18} />
+                                <span>{currentQuestionIndex + 1} / {questions.length}</span>
+                            </button>
+                        </div>
+                        <button onClick={toggleMarkQuestion} className={`p-2 rounded-lg transition ${isMarked ? 'bg-red-50 text-red-500' : 'text-stone-400 hover:bg-stone-100'}`}>
+                            <Icons.Flag size={20} fill={isMarked ? "currentColor" : "none"} />
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 md:p-6 max-w-4xl mx-auto w-full scroll-smooth">
+                        {q.isGroup && (
+                            <div className="bg-emerald-50 rounded-xl p-6 mb-6 shadow-sm border-l-4 border-emerald-600">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-lg text-emerald-900 flex items-center">
+                                        <Icons.MapIcon size={18} className="mr-2"/>
+                                        {q.groupTitle}
+                                    </h3>
+                                    <span className="text-xs bg-white text-emerald-800 border border-emerald-200 px-2 py-1 rounded">題組</span>
+                                </div>
+                                <div className="prose prose-stone max-w-none text-stone-800 leading-relaxed text-base">
+                                    {q.groupContent}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl p-6 shadow-sm ring-1 ring-stone-200">
+                            <div className="flex items-center space-x-2 mb-4">
+                                <span className={`text-xs font-bold px-2 py-1 rounded bg-stone-200 text-stone-800`}>
+                                    單選題
+                                </span>
+                                <span className={`text-xs px-2 py-1 rounded border ${q.colorClass || 'text-gray-500 bg-gray-100 border-gray-200'}`}>
+                                    {q.category}
+                                </span>
+                                {q.isReview && <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200 flex items-center animate-pulse"><Icons.Tag size={12} className="mr-1" /> 觀念複習</span>}
+                            </div>
+
+                            <h2 className="text-xl font-medium text-stone-900 mb-8 leading-relaxed whitespace-pre-wrap">
+                                {q.text}
+                            </h2>
+
+                            <div className="space-y-4">
+                                {q.options.map((option, idx) => {
+                                    const isSelected = currentAns.includes(idx);
+                                    let btnClass = "w-full text-left p-4 rounded-xl border transition-all flex items-start space-x-4 relative overflow-hidden ";
+                                    if (showExplanation) {
+                                        if (q.correctAnswer.includes(idx)) btnClass += "border-emerald-500 bg-emerald-50 text-emerald-900";
+                                        else if (isSelected) btnClass += "border-red-400 bg-red-50 text-red-900";
+                                        else btnClass += "border-stone-100 text-stone-400 opacity-60";
                                     } else {
-                                        setScreen('result');
+                                        if (isSelected) btnClass += "border-stone-600 bg-stone-100 text-stone-900 shadow-md";
+                                        else btnClass += "border-stone-200 hover:border-emerald-400 hover:bg-emerald-50 text-stone-700";
                                     }
-                                }}
-                                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md flex items-center gap-2 transition"
-                            >
-                                {currentQIndex === questions.length - 1 ? '交卷' : '下一題'}
-                                <Icons.ChevronRight size={18} />
-                            </button>
+
+                                    return (
+                                        <button key={idx} onClick={() => handleAnswerSelect(idx)} className={btnClass} disabled={showExplanation}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold border transition-colors ${
+                                                isSelected ? 'bg-stone-700 border-stone-700 text-white' : 'border-stone-300 text-stone-500'
+                                            } ${showExplanation && q.correctAnswer.includes(idx) ? '!bg-emerald-600 !border-emerald-600 !text-white' : ''}`}>
+                                                {String.fromCharCode(65 + idx)}
+                                            </div>
+                                            <span className="pt-1 text-lg">{option}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {showExplanation && (
+                                <div className="mt-8 bg-sky-50 p-5 rounded-xl border border-sky-100 animate-fade-in">
+                                    <div className="flex items-center space-x-2 text-sky-900 font-bold mb-3">
+                                        <Icons.Award size={20} />
+                                        <span>解析</span>
+                                    </div>
+                                    <p className="text-sky-900 leading-relaxed">{q.explanation}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Grid Overlay */}
-                    {showGrid && (
-                        <div className="absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm animate-fade-in flex justify-end">
-                            <div className="w-80 bg-[#fafffd] h-full shadow-2xl flex flex-col animate-slide-up">
-                                <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
-                                    <h3 className="font-serif font-bold text-slate-800">題目導覽</h3>
-                                    <button onClick={() => setShowGrid(false)} className="text-slate-400"><Icons.XCircle size={24}/></button>
-                                </div>
-                                <div className="p-4 grid grid-cols-5 gap-3 overflow-y-auto">
-                                    {questions.map((qItem, idx) => {
-                                        const isDone = answers[qItem.id] !== undefined;
-                                        const isCurr = idx === currentQIndex;
-                                        return (
-                                            <button 
-                                                key={qItem.id} 
-                                                onClick={() => { setCurrentQIndex(idx); setShowExplanation(false); setShowGrid(false); }}
-                                                className={`h-10 rounded-md font-bold text-sm relative ${
-                                                    isCurr ? 'bg-white ring-2 ring-emerald-500 text-emerald-600' : 
-                                                    isDone ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-500'
-                                                }`}
-                                            >
-                                                {idx + 1}
-                                                {marked.has(qItem.id) && <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full ring-1 ring-white"/>}
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <div className="bg-white border-t border-stone-200 p-4 flex justify-between items-center safe-area-bottom">
+                        <button 
+                            onClick={() => { setShowExplanation(false); setCurrentQuestionIndex(prev => Math.max(0, prev - 1)); }}
+                            disabled={currentQuestionIndex === 0}
+                            className="flex items-center space-x-2 px-4 py-2 rounded-full text-stone-600 hover:bg-stone-100 disabled:opacity-30 transition"
+                        >
+                            <Icons.ChevronLeft size={20} /> <span>上一題</span>
+                        </button>
+                        
+                        <button 
+                            onClick={() => {
+                                if (currentQuestionIndex < questions.length - 1) { setShowExplanation(false); setCurrentQuestionIndex(prev => prev + 1); } 
+                                else { setCurrentScreen('result'); setShowGrid(false); }
+                            }}
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white px-8 py-2.5 rounded-full font-bold shadow-md flex items-center transition"
+                        >
+                            {currentQuestionIndex === questions.length - 1 ? '完成' : '下一題'} <Icons.ChevronRight size={18} className="ml-1"/>
+                        </button>
+                    </div>
                 </div>
             );
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<GeographyApp />);
     </script>
 </body>
 </html>
